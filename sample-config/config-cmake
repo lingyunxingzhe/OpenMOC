@@ -1,0 +1,12 @@
+rm CMakeCache.txt
+cmake                                              \
+-G "Eclipse CDT4 - Unix Makefiles"                 \
+-D CMAKE_CXX_FLAGS=-std=gnu++0x                    \
+-D CMAKE_BUILD_TYPE=Debug                          \
+-D Silo_DIR=/home/robertsj/opt/silo/4.7.2/         \
+-D EXPAT_DIR=/home/robertsj/opt/expat              \
+-D USE_IMAGEMAGICK=YES                             \
+-D USE_SILO=YES                                    \
+-D USE_OPENMP=false                                \
+/home/robertsj/Research/openmoc/source/
+
