@@ -16,13 +16,13 @@
 #include <utility>
 #include <sstream>
 #include "Magick++.h"
-#include "silo.h"
+#include <silo.h>
 
 typedef enum colortypes {
 	SCALED,
 	RANDOM,
 	BLACKWHITE
-}colortype;
+} colortype;
 
 /* define BitMap struct */
 template <typename U>
@@ -40,7 +40,6 @@ struct BitMap {
 
 /*
  *  function definitions
- */
 template <typename U>
 void plot(BitMap<U>* bitMap, std::string name, std::string extension);
 template <typename U>
@@ -71,7 +70,7 @@ template <typename U>
 void drawText(BitMap<U>* bitMap, std::string text, int x, int y);
 template <typename U>
 void addScalebar(BitMap<U>* bitMap, float* pixMap, std::list<Magick::Drawable>* drawList);
-
+*/
 
 
 /*
@@ -95,7 +94,7 @@ void plot(BitMap<U>* bitMap, std::string name, std::string extension){
 	}
 
 	delete [] pixMap;
-}
+};
 
 template <typename U>
 void plotSilo(BitMap<U>* bitMap, float* pixMap, std::string name, std::string extension){
@@ -112,7 +111,7 @@ void plotSilo(BitMap<U>* bitMap, float* pixMap, std::string name, std::string ex
 
 	/* Create file */
 	if (extension == "h5"){
-		file = DBCreate(title, DB_CLOBBER, DB_LOCAL, "structured mesh bitmap", DB_HDF5);
+		file = DBCreate(title, DB_CLOBBER, DB_LOCAL, "structured mesh bitmap", DB_HDF5X);
 	}
 	else{
 		file = DBCreate(title, DB_CLOBBER, DB_LOCAL, "structured mesh bitmap", DB_PDB);
@@ -156,7 +155,7 @@ void plotSilo(BitMap<U>* bitMap, float* pixMap, std::string name, std::string ex
 	/* close file */
     DBClose(file);
 	printf("done plotting silo mesh...\n");
-}
+};
 
 /**
  * Generic function for plotting pixMap in png, tiff, or jpg file
@@ -229,7 +228,7 @@ void plotMagick(BitMap<U>* bitMap, float* pixMap, std::string name, std::string 
 	image.write(title);
 
 	delete [] color;
-}
+};
 
 /* copy elements in bitMap to bitMapRGB */
 template <typename U>
@@ -242,7 +241,7 @@ void copyBitMap(BitMap<U>* bitMap, float* pixMap){
 		}
 	}
 
-}
+};
 
 /* normalize bitMapRGB to numbers between 0 and 1 */
 template <typename U>
@@ -262,7 +261,7 @@ void normalize(BitMap<U>* bitMap, float* pixMap){
 	}
 
 	delete [] bounds;
-}
+};
 
 /* get min and max bounds of bitMapRGB */
 template <typename U>
@@ -288,7 +287,7 @@ void getBounds(BitMap<U>* bitMap, float* pixMap, float* bounds){
 			}
 		}
 	}
-}
+};
 
 /* write RGB triplet to color using HOT color scheme */
 template <typename U>
@@ -316,7 +315,7 @@ void getColor(BitMap<U>* bitMap, float value, float* color){
 		color[1] = int(value * 10000)   % 100 / 100.0;
 		color[2] = int(value * 1000000) % 100 / 100.0;
 	}
-}
+};
 
 /* pseudorandomize bitMapRGB with number between 0 and 1 */
 template <typename U>
@@ -339,7 +338,7 @@ void randomize(BitMap<U>* bitMap, float* pixMap){
 	}
 
 	delete [] myRandoms;
-}
+};
 
 
 /* initialize values to -1 */
@@ -365,7 +364,7 @@ void initialize(BitMap<U>* bitMap){
 	bitMap->center_x = 0;
 	bitMap->center_y = 0;
 	bitMap->color_type = RANDOM;
-}
+};
 
 
 /**
@@ -419,7 +418,7 @@ void drawLine(BitMap<U>* bitMap, V xIn, V yIn, V xOut, V yOut, U color){
 		}
 	}
 
-}
+};
 
 /**
  * Convert a x value our from geometry coordinates to Bitmap coordinates.
@@ -427,7 +426,7 @@ void drawLine(BitMap<U>* bitMap, V xIn, V yIn, V xOut, V yOut, U color){
 template <typename U, typename V>
 int convertToBitmapX(BitMap<U>* bitMap, V x){
 	return int((x - bitMap->center_x) * (bitMap->pixel_x - 1) / bitMap->geom_x + (bitMap->pixel_x - 1) / 2.0);
-}
+};
 
 /**
  * Convert a y value our from geometry coordinates to Bitmap coordinates.
@@ -435,7 +434,7 @@ int convertToBitmapX(BitMap<U>* bitMap, V x){
 template <typename U, typename V>
 int convertToBitmapY(BitMap<U>* bitMap, V y){
 	return int(-(y - bitMap->center_y) * (bitMap->pixel_y - 1) / bitMap->geom_x + (bitMap->pixel_y - 1) / 2.0);
-}
+};
 
 /**
  * delete BitMap
@@ -444,7 +443,7 @@ template <typename U>
 void deleteBitMap(BitMap<U>* bitMap){
 	delete [] bitMap->pixels;
 	delete bitMap;
-}
+};
 
 /**
  * Write text on BitMap
@@ -454,7 +453,7 @@ void drawText(BitMap<U>* bitMap, std::string text, int x, int y){
 
 	/* add item to drawlist	 */
 	bitMap->drawList.push_back(Magick::DrawableText(x, y, text));
-}
+};
 
 /**
  * add Scalebar to bitMap
@@ -499,13 +498,6 @@ void addScalebar(BitMap<U>* bitMap, float* pixMap, std::list<Magick::Drawable>* 
 	text = text_stream.str();
 	drawList->push_back(Magick::DrawableText(bitMap->pixel_x - 145, 126, text));
 
-}
-
-
-
-
-
-
-
+};
 
 #endif /* QUICKPLOT_H_ */

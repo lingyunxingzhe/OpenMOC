@@ -25,9 +25,9 @@ AC_SEARCH_LIBS([XML_ParserCreate], [expat], [], [
   AC_MSG_ERROR([unable to find expat])
 ], [])
 
-AC_SEARCH_LIBS([silo_version], [silo siloh5], [], [
-  AC_MSG_ERROR([unable to find silo])
-], [-lz])
+#AC_SEARCH_LIBS([silo_version], [silo siloh5], [], [
+#  AC_MSG_ERROR([unable to find silo])
+#], [-lz])
 
 # Requires some non-standard header files
 AC_CHECK_HEADERS([limits.h stdlib.h string.h sys/time.h])

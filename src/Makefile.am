@@ -1,4 +1,4 @@
-AM_CXXFLAGS = -Wall -Werror -std=gnu++0x -fopenmp $(MAGICKXX_CFLAGS)
+AM_CXXFLAGS = -Wall -std=gnu++0x -fopenmp $(MAGICKXX_CFLAGS)
 AM_LDFLAGS = $(MAGICKXX_LIBS)
 
 bin_PROGRAMS=openmoc

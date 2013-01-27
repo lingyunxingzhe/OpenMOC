@@ -1165,7 +1165,7 @@ void Solver::computeNetCurrent() {
 /* FIXME */
 void Solver::computeCoeffs() {
 	double scatter_source, fission_source, volume;
-	double *nu_sigma_f, *scalar_flux, *sigma_s, *chi, *source, *sigma_a;
+	double *nu_sigma_f, *scalar_flux, *chi, *source, *sigma_s, *sigma_a;
 	FlatSourceRegion* fsr;
 	Material* material;
 	int start_index, end_index;

@@ -689,3 +689,169 @@ double Circle::getYMax(){
 }
 
 
+Cruciform::Cruciform(const int id, const boundaryType boundary, const double _x,
+	const double _y, const double _scale): Surface(id, CRUCIFORM, boundary) {
+    x = _x;
+    y = _y;
+	scale = _scale;
+}
+
+double resqrt(double x) {
+    return x >= 0 ? sqrt(x) : 0;
+}
+
+/**
+ * Evaluate a point using the circle's quadratic surface equation
+ * @param point a pointer to the point of interest
+ * @return the value of point in the equation
+ */
+
+double Cruciform::evaluate(const Point* point) const {
+    double rx = (point->getX() - x)/scale;
+    double ry = (point->getY() - y)/scale;
+    return cruci(rx, ry);
+}
+
+double Cruciform::cruci(double px, double py) {
+	double ax = abs(px);
+	double ay = abs(py);
+
+    // I've added a term so that we don't go to zero beyond x = 0.719...
+
+    double ret =  ay - (
+        (ax <= 0.18585) * (resqrt(0.03454 - pow(ax, 2)) + 0.5334) +
+        (ax > 0.18585) * (ax <= 0.5334) * (0.5334 - resqrt(0.120756 - pow(ax - 0.5334, 2))) +
+        (ax > 0.5334) * (ax < 0.719249402) * resqrt(0.03454 - pow(ax - 0.5334, 2)) +
+        (ax >= 0.719249402) * (ay - sqrt(pow(ax,2) + pow(ay,2)) + 0.719249402));
+    return ret;
+}
+
+
+Point* Cruciform::scalarsecant(double x_n, double x_nm1, Point* initial, double angle) {
+    double x0 = (initial->getX() - x) / scale;
+    double y0 = (initial->getY() - y) / scale;
+    double delx = cos(angle);
+    double dely = sin(angle);
+
+    double y_n, y_nm1, dx;
+    int max_iterations = 1000;
+
+    y_nm1 = cruci(x_nm1 * delx + x0, x_nm1 * dely + y0);
+    y_n   = cruci(x_n * delx + x0, x_n * dely + y0);
+
+    if (abs(y_n) > abs(y_nm1)){
+        swap(x_nm1, x_n);
+        swap(y_nm1, y_n);
+    }
+
+    for(int iters=0; iters<max_iterations; iters++) {
+        if(y_n == y_nm1)
+            return (Point*)0;
+        dx = y_n * (x_n - x_nm1) / (y_n - y_nm1);
+        if(abs(y_n) < EPSILON && abs(x_n - x_nm1) < EPSILON)
+            return new Point((x_n - dx) * delx + x0, (x_n - dx) * dely + y0);
+        x_nm1 = x_n;
+        x_n = x_n - dx;
+        y_nm1 = y_n;
+        y_n = cruci(x_n * delx + x0, x_n * dely + y0);
+    }
+
+    return (Point*)0;
+}
+
+
+/**
+ * Finds the intersection point with this circle from a given point and
+ * trajectory defined by an angle (0, 1, or 2 points)
+ * @param point pointer to the point of interest
+ * @param angle the angle defining the trajectory in radians
+ * @param points pointer to a an array of points to store intersection points
+ * @return the number of intersection points (0 or 1)
+ */
+int Cruciform::intersection(Point* point, double angle, Point* points) {
+    double xn, xnm1;
+    Point* cur;
+    vector<Point*> intersections;
+    int num = 0;
+
+    bool breaking; // <- this can be done with gotos but it's unsafe
+
+    for(double xx=-1.0; xx <= 1; xx += 0.1)
+    {
+        breaking = 0;
+        xn = xx - 0.05;
+        xnm1 = xx + 0.05;
+        cur = scalarsecant(xn, xnm1, point, angle);
+
+        if(!cur)
+            continue;
+
+        for(int i=0; i<(int)intersections.size(); i++) {
+            if(abs(cur->getX() - intersections[i]->getX()) < EPSILON &&
+               abs(cur->getY() - intersections[i]->getY()) < EPSILON) {
+                breaking = 1;
+                delete cur;
+                break;
+            }
+        }
+
+        if(breaking)
+            continue;
+
+        intersections.push_back(cur);
+
+        //printf("INTER (%f, %f)\n", cur->getX(), cur->getY());
+    }
+
+    // I think this function should really be returning a vector,
+    // but I'll use this minor boilerplate to deal with this
+    int mnum = min(2, (int)intersections.size());
+    
+    for(num=0; num < mnum; num++) {
+        points[num].setCoords(intersections[num]->getX(),
+                intersections[num]->getY());
+        delete intersections[num];
+    }
+    return mnum;
+}
+
+/**
+ * Converts this Plane's attributes to a character array
+ * @param a character array of this plane's attributes
+ */
+string Cruciform::toString() {
+	stringstream string;
+
+	string << "Surface type = CRUCIFORM " << " x = "
+			<< x << ", y = " << y << ", x0 = " << center.getX() 
+			<< ", y0 = " << center.getY() << ", scale = " << scale;
+
+	return string.str();
+}
+
+
+double Cruciform::getXMin(){
+	log_printf(ERROR, "Cruciform::getXMin not implemented");
+	return -1.0/0.0;
+}
+
+double Cruciform::getXMax(){
+	log_printf(ERROR, "Cruciform::getXMax not implemented");
+	return 1.0/0.0;
+}
+
+double Cruciform::getYMin(){
+	log_printf(ERROR, "Cruciform::getYMin not implemented");
+	return -1.0/0.0;
+}
+
+double Cruciform::getYMax(){
+	log_printf(ERROR, "Cruciform::getYMax not implemented");
+	return 1.0/0.0;
+}
+
+double Cruciform::getRadius() {
+    return scale;
+}
+
+
