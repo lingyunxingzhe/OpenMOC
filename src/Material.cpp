@@ -28,7 +28,12 @@ Material::Material(int id,
 	_n++;
 
 	if (sigma_a_cnt != NUM_ENERGY_GROUPS)
-		log_printf(ERROR, "Wrong number of sigma_a");
+    {
+        char log_str[100];
+        sprintf(log_str, "Wrong number of sigma_a: %d vs %d",
+                sigma_a_cnt, NUM_ENERGY_GROUPS);
+		log_printf(ERROR, log_str);
+    }
 	memcpy(_sigma_a, sigma_a, NUM_ENERGY_GROUPS*sizeof(*_sigma_a));
 
 	if (sigma_t_cnt != NUM_ENERGY_GROUPS)

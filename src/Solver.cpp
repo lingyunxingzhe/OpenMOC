@@ -16,7 +16,7 @@
  * @param track_generator pointer to the trackgenerator
  */
 Solver::Solver(Geometry* geom, TrackGenerator* track_generator,
-								Plotter* plotter, bool plotFluxes) {
+								Plotter* plotter) {
 	_geom = geom;
 	_quad = new Quadrature(TABUCHI);
 	_num_FSRs = geom->getNumFSRs();
@@ -24,15 +24,16 @@ Solver::Solver(Geometry* geom, TrackGenerator* track_generator,
 	_num_tracks = track_generator->getNumTracks();
 	_num_azim = track_generator->getNumAzim();
 	_plotter = plotter;
-	_plot_fluxes = plotFluxes;
-	_pix_map_FSRs = track_generator->getFSRsPixMap();
 	try{
 		_flat_source_regions = new FlatSourceRegion[_num_FSRs];
 		_FSRs_to_powers = new double[_num_FSRs];
 		_FSRs_to_pin_powers = new double[_num_FSRs];
 
-		for (int e = 0; e <= NUM_ENERGY_GROUPS; e++)
+		for (int e = 0; e <= NUM_ENERGY_GROUPS; e++) {
 			_FSRs_to_fluxes[e] = new double[_num_FSRs];
+			_FSRs_to_absorption[e] = new double[_num_FSRs];
+			_FSRs_to_pin_absorption[e] = new double[_num_FSRs];
+		}
 	}
 	catch(std::exception &e) {
 		log_printf(ERROR, "Could not allocate memory for the solver's flat "
@@ -423,7 +424,8 @@ void Solver::checkTrackSpacing() {
 
 
 	/* Loop over all FSRs and if one FSR does not have tracks in it, print
-	 * error message to the screen and exit program */
+	 * error message to the screen and exit program 
+    */
 	for (int i=0; i < _num_FSRs; i++) {
 		if (FSR_segment_tallies[i] == 0) {
 			cell = _geom->findCell(i);
@@ -453,7 +455,24 @@ void Solver::computePinPowers() {
 	double curr_pin_power = 0;
 	double prev_pin_power = 0;
 
-	/* Loop over all FSRs and comput the fision rate*/
+	/* create BitMaps for plotting */
+	BitMap<int>* bitMapFSR = new BitMap<int>;
+	BitMap<float>* bitMap = new BitMap<float>;
+	bitMapFSR->pixel_x = _plotter->getBitLengthX();
+	bitMapFSR->pixel_y = _plotter->getBitLengthY();
+	bitMap->pixel_x = _plotter->getBitLengthX();
+	bitMap->pixel_y = _plotter->getBitLengthY();
+	initialize(bitMapFSR);
+	initialize(bitMap);
+	bitMap->geom_x = _geom->getWidth();
+	bitMap->geom_y = _geom->getHeight();
+	bitMapFSR->color_type = RANDOM;
+	bitMap->color_type = SCALED;
+
+	/* make FSR BitMap */
+	_plotter->makeFSRMap(bitMapFSR->pixels);
+
+	/* Loop over all FSRs and compute the fission rate*/
 	for (int i=0; i < _num_FSRs; i++) {
 		fsr = &_flat_source_regions[i];
 		_FSRs_to_powers[i] = fsr->computeFissionRate();
@@ -488,14 +507,21 @@ void Solver::computePinPowers() {
 		_FSRs_to_pin_powers[i] /= avg_pin_power;
 	}
 
-	_plotter->plotRegion(_pix_map_FSRs, _FSRs_to_pin_powers, "pin_powers");
+
+	log_printf(NORMAL, "Plotting pin powers...");
+	_plotter->makeRegionMap(bitMapFSR->pixels, bitMap->pixels, _FSRs_to_pin_powers);
+	plot(bitMap, "pin_powers", _plotter->getExtension());
+
+	/* delete bitMaps */
+	deleteBitMap(bitMapFSR);
+	deleteBitMap(bitMap);
 
 	return;
 }
 
 
 
-void Solver::fixedSourceIteration(int max_iterations) {
+void Solver::fixedSourceIteration(int max_iterations, bool cmfd = false) {
 
 	Track* track;
 	int num_segments;
@@ -527,6 +553,23 @@ void Solver::fixedSourceIteration(int max_iterations) {
 
 		/* Initialize flux in each region to zero */
 		zeroFSRFluxes();
+
+
+#if CMFD_ACCEL
+		if (cmfd == true){
+
+			/* zero surface currents */
+			Mesh* mesh = _geom->getMesh();
+			for (int cell = 0; cell < mesh->getCellHeight()*mesh->getCellWidth(); cell++){
+				for (int surface = 0; surface < 8; surface++){
+					for (int group = 0; group < NUM_ENERGY_GROUPS; group++){
+						mesh->getCells(cell)->getMeshSurfaces(surface)->setCurrent(0, group);
+						mesh->getCells(cell)->getMeshSurfaces(surface)->setFlux(0, group);
+					}
+				}
+			}
+		}
+#endif
 
 		/* Loop over azimuthal each thread and azimuthal angle*
 		 * If we are using OpenMP then we create a separate thread
@@ -610,6 +653,25 @@ void Solver::fixedSourceIteration(int max_iterations) {
 
 #endif
 
+#if CMFD_ACCEL
+					if (cmfd == true){
+
+						if (segment->_mesh_surface_fwd != NULL){
+							pe = 0;
+
+							for (e = 0; e < NUM_ENERGY_GROUPS; e++) {
+								for (p = 0; p < NUM_POLAR_ANGLES; p++){
+									/* increment current (polar and azimuthal weighted flux, group)*/
+									segment->_mesh_surface_fwd->incrementCurrent(polar_fluxes[pe] * weights[p], track->getPhi(), e);
+									segment->_mesh_surface_fwd->incrementFlux(polar_fluxes[pe] * weights[p], e);
+									pe++;
+								}
+							}
+						}
+					}
+#endif
+
+
 					/* Increment the scalar flux for this FSR */
 					fsr->incrementFlux(fsr_flux);
 				}
@@ -663,6 +725,24 @@ void Solver::fixedSourceIteration(int max_iterations) {
 							fsr_flux[e] += delta * weights[p];
 							polar_fluxes[pe] -= delta;
 							pe++;
+						}
+					}
+#endif
+
+#if CMFD_ACCEL
+					if (cmfd == true){
+
+						if (segment->_mesh_surface_bwd != NULL){
+							pe = 0;
+
+							for (e = 0; e < NUM_ENERGY_GROUPS; e++) {
+								for (p = 0; p < NUM_POLAR_ANGLES; p++){
+									/* increment current (polar and azimuthal weighted flux, group)*/
+									segment->_mesh_surface_bwd->incrementCurrent(polar_fluxes[pe] * weights[p], track->getPhi(), e);
+									segment->_mesh_surface_bwd->incrementFlux(polar_fluxes[pe] * weights[p], e);
+									pe++;
+								}
+							}
 						}
 					}
 #endif
@@ -908,7 +988,22 @@ double Solver::computeKeff(int max_iterations) {
 			/* Converge the scalar flux spatially within geometry to plot */
 			fixedSourceIteration(1000);
 
-			if (_plot_fluxes == true){
+			#if CMFD_ACCEL
+			/* Compute the net currents */
+			fixedSourceIteration(1000, true);
+			_geom->getMesh()->splitCorners();
+			computeXS(_geom->getMesh());
+			if (_plotter->plotCurrent()){
+				//_geom->getMesh()->printCurrents();
+				_plotter->plotNetCurrents(_geom->getMesh());
+				_plotter->plotSurfaceFlux(_geom->getMesh());
+				_plotter->plotXS(_geom->getMesh());
+			}
+
+
+			#endif
+
+			if (_plotter->plotFlux() == true){
 				/* Load fluxes into FSR to flux map */
 				for (int r=0; r < _num_FSRs; r++) {
 					double* fluxes = _flat_source_regions[r].getFlux();
@@ -920,6 +1015,7 @@ double Solver::computeKeff(int max_iterations) {
 				}
 				plotFluxes();
 			}
+
 
 			return _k_eff;
 		}
@@ -944,13 +1040,11 @@ double Solver::computeKeff(int max_iterations) {
 	log_printf(WARNING, "Unable to converge the source after %d iterations",
 															max_iterations);
 
-	log_printf(NORMAL, "Plotting fluxes...");
-
 	/* Converge the scalar flux spatially within geometry to plot */
 	fixedSourceIteration(1000);
 
-
-	if (_plot_fluxes == true){
+	if (_plotter->plotFlux() == true){
+		log_printf(NORMAL, "Plotting fluxes...");
 		/* Load fluxes into FSR to flux map */
 		for (int r=0; r < _num_FSRs; r++) {
 			double* fluxes = _flat_source_regions[r].getFlux();
@@ -963,6 +1057,11 @@ double Solver::computeKeff(int max_iterations) {
 		plotFluxes();
 	}
 
+
+
+
+
+
 	return _k_eff;
 }
 
@@ -970,17 +1069,253 @@ double Solver::computeKeff(int max_iterations) {
 // only plots flux
 void Solver::plotFluxes(){
 
+	/* create BitMaps for plotting */
+	BitMap<int>* bitMapFSR = new BitMap<int>;
+	BitMap<float>* bitMap = new BitMap<float>;
+	bitMapFSR->pixel_x = _plotter->getBitLengthX();
+	bitMapFSR->pixel_y = _plotter->getBitLengthX();
+	bitMap->pixel_x = _plotter->getBitLengthX();
+	bitMap->pixel_y = _plotter->getBitLengthY();
+	initialize(bitMapFSR);
+	initialize(bitMap);
+	bitMap->geom_x = _geom->getWidth();
+	bitMap->geom_y = _geom->getHeight();
+	bitMapFSR->color_type = RANDOM;
+	bitMap->color_type = SCALED;
+
+
+
+	/* make FSR BitMap */
+	_plotter->makeFSRMap(bitMapFSR->pixels);
+
 	for (int i = 0; i < NUM_ENERGY_GROUPS; i++){
 
 		std::stringstream string;
-		string << "flux" << i << "a";
+		string << "flux" << i + 1 << "group";
 		std::string title_str = string.str();
 
-		log_printf(NORMAL, "Plotting group %d flux...", i);
-		_plotter->plotRegion(_pix_map_FSRs, _FSRs_to_fluxes[i], title_str);
+		log_printf(NORMAL, "Plotting group %d flux...", (i+1));
+		_plotter->makeRegionMap(bitMapFSR->pixels, bitMap->pixels, _FSRs_to_fluxes[i]);
+		plot(bitMap, title_str, _plotter->getExtension());
 	}
 
 	log_printf(NORMAL, "Plotting total flux...");
-	_plotter->plotRegion(_pix_map_FSRs, _FSRs_to_fluxes[NUM_ENERGY_GROUPS], "flux_total");
+	_plotter->makeRegionMap(bitMapFSR->pixels, bitMap->pixels, _FSRs_to_fluxes[NUM_ENERGY_GROUPS]);
+	plot(bitMap, "flux_total", _plotter->getExtension());
+
+	/* delete bitMaps */
+	deleteBitMap(bitMapFSR);
+	deleteBitMap(bitMap);
+}
+
+/* FIXME */
+void Solver::cmfd() {
+	/* computeNetCurrent(); */
+	computeCoeffs();
+}
+
+/* FIXME */
+void Solver::computeNetCurrent() {
+	double scatter_source, fission_source, volume;
+	double *nu_sigma_f, *scalar_flux, *sigma_s, *chi, *source;
+	FlatSourceRegion* fsr;
+	Material* material;
+	int start_index, end_index;
+
+	log_printf(NORMAL, "Computing Net Current...");
+
+	/* Check that each FSR has at least one segment crossing it */
+	checkTrackSpacing();
+
+	/* Obtain information from each FSR */
+	for (int r = 0; r < _num_FSRs; r++) {
+
+		/* Get pointers to important coefficients for each FSRs */
+		fsr = &_flat_source_regions[r];
+		material = fsr->getMaterial();
+		nu_sigma_f = material->getNuSigmaF();
+		scalar_flux = fsr->getFlux();
+		volume = fsr->getVolume();
+		source = fsr->getSource();
+		chi = material->getChi();
+		sigma_s = material->getSigmaS();
+
+		/* compute fission source */
+		start_index = fsr->getMaterial()->getNuSigmaFStart();
+		end_index = fsr->getMaterial()->getNuSigmaFEnd();
+		fission_source = 0;
+		for (int e = start_index; e < end_index; e++)
+			fission_source += nu_sigma_f[e] * scalar_flux[e] * volume;
+
+		/* compute scattering source */
+		for (int G = 0; G < NUM_ENERGY_GROUPS; G++) {
+			scatter_source = 0;
+			start_index = material->getSigmaSStart(G);
+			end_index = material->getSigmaSEnd(G);
+			for (int g = start_index; g < end_index; g++)
+				scatter_source += sigma_s[G*NUM_ENERGY_GROUPS + g]
+					* scalar_flux[g];
+			/* Set the total source for region r in group G */
+			source[G] = ((1.0 / (_old_k_effs.front())) * fission_source *
+						 chi[G] + scatter_source) * ONE_OVER_FOUR_PI;
+		}
+
+	}
+}
+
+/* FIXME */
+void Solver::computeCoeffs() {
+	double scatter_source, fission_source, volume;
+	double *nu_sigma_f, *scalar_flux, *chi, *source, *sigma_s, *sigma_a;
+	FlatSourceRegion* fsr;
+	Material* material;
+	int start_index, end_index;
+
+	log_printf(NORMAL, "Computing mesh averaged xs...");
+
+	/* Check that each FSR has at least one segment crossing it */
+	checkTrackSpacing();
+
+	/* Obtain information from each FSR */
+	for (int r = 0; r < _num_FSRs; r++) {
+
+		/* Get coefficients for each FSRs */
+		fsr = &_flat_source_regions[r];
+		material = fsr->getMaterial();
+		nu_sigma_f = material->getNuSigmaF();
+		scalar_flux = fsr->getFlux();
+		volume = fsr->getVolume();
+		source = fsr->getSource();
+		chi = material->getChi();
+		sigma_s = material->getSigmaS();
+
+		/* compute absorption cross section */
+		sigma_a = material->getSigmaA();
+		for (int e = 0; e <= NUM_ENERGY_GROUPS; e++) {
+			_FSRs_to_absorption[e][r] = sigma_a[e];
+		}
+
+		/* compute fission source */
+		start_index = fsr->getMaterial()->getNuSigmaFStart();
+		end_index = fsr->getMaterial()->getNuSigmaFEnd();
+		fission_source = 0;
+		for (int e = start_index; e < end_index; e++)
+			fission_source += nu_sigma_f[e] * scalar_flux[e] * volume;
+		//_FSRs_to_fission_source[r] = fission_source;
+
+		/* comptue scattering source */
+		for (int G = 0; G < NUM_ENERGY_GROUPS; G++) {
+			scatter_source = 0;
+			start_index = material->getSigmaSStart(G);
+			end_index = material->getSigmaSEnd(G);
+			for (int g = start_index; g < end_index; g++) {
+				scatter_source += sigma_s[G*NUM_ENERGY_GROUPS + g]
+					* scalar_flux[g];
+			}
+			//_FSRs_to_scatter_source[r] = scatter_source * volume;
+
+			/* source[G] = ((1.0 / (_old_k_effs.front())) * fission_source *
+			   chi[G] + scatter_source) * ONE_OVER_FOUR_PI; */
+		}
+
+		//_FSRs_to_powers[i] = fsr->computeFissionRate();
+	}
+
+	/* Compute the pin powers by adding up the powers of FSRs in each
+	 * lattice cell, saving lattice cell powers to files, and saving the
+	 * pin power corresponding to each FSR id in FSR_to_pin_powers */
+	_geom->computePinAbsorption(_FSRs_to_absorption, _FSRs_to_pin_absorption);
+	log_printf(NORMAL, "Computing mesh averaged absorption xs...");
+
+
+	/* Compute the total power based by accumulating the power of each unique
+	 * pin with a nonzero power */
+	/* for (int i=0; i < _num_FSRs; i++) {
+		curr_pin_power = _FSRs_to_pin_powers[i];
+	*/
+		/* If this pin power is unique and nozero (doesn't match the previous
+		 * pin's power), then tally it
+		 */
+	/*	if (curr_pin_power > 0 && curr_pin_power != prev_pin_power) {
+			tot_pin_power += curr_pin_power;
+			num_nonzero_pins++;
+			prev_pin_power = curr_pin_power;
+		}
+	}*/
+
 
 }
+
+/* compute the xs for all MeshCells in the Mesh */
+void Solver::computeXS(Mesh* mesh){
+	log_printf(NORMAL, "Computing CMFD mesh cross sections...");
+
+	// tallies for fsr_vol * group_avg_xs and fsr_vol
+	double abs_tally, vol_tally, flux_tally, tot_tally, fis_tally, nu_fis_tally;
+	MeshCell* meshCell;
+	FlatSourceRegion* fsr;
+	Material* material;
+	double volume = 0;
+	double flux, abs, tot, fis, nu_fis;
+	double abs_tally_fsr, flux_tally_fsr, tot_tally_fsr, fis_tally_fsr, nu_fis_tally_fsr;
+
+	// loop over mesh cells
+	for (int i = 0; i < mesh->getCellWidth() * mesh->getCellHeight(); i++){
+		meshCell = mesh->getCells(i);
+		abs_tally = 0;
+		vol_tally = 0;
+		flux_tally = 0;
+		tot_tally = 0;
+		fis_tally = 0;
+		nu_fis_tally = 0;
+
+		std::vector<int>::iterator iter;
+		for (iter = meshCell->getFSRs()->begin(); iter != meshCell->getFSRs()->end(); ++iter) {
+			fsr = &_flat_source_regions[*iter];
+			material = fsr->getMaterial();
+			volume = fsr->getVolume();
+			abs_tally_fsr = 0;
+			flux_tally_fsr = 0;
+			tot_tally_fsr = 0;
+			fis_tally_fsr = 0;
+			nu_fis_tally_fsr = 0;
+
+			for (int e = 0; e < NUM_ENERGY_GROUPS; e++){
+				flux = fsr->getFlux()[e];
+				abs = material->getSigmaA()[e];
+				tot = material->getSigmaT()[e];
+				fis = material->getSigmaF()[e];
+				nu_fis = material->getNuSigmaF()[e];
+				abs_tally_fsr += abs * flux;
+				tot_tally_fsr += tot * flux;
+				fis_tally_fsr += fis * flux;
+				nu_fis_tally_fsr += nu_fis * flux;
+				flux_tally_fsr += flux;
+			}
+
+			abs_tally += abs_tally_fsr * volume;
+			tot_tally += tot_tally_fsr * volume;
+			fis_tally += fis_tally_fsr * volume;
+			nu_fis_tally += nu_fis_tally_fsr * volume;
+			vol_tally += volume;
+			flux_tally += flux_tally_fsr * volume;
+		}
+
+		meshCell->setAbsRate(abs_tally / volume);
+		meshCell->setSigmaA(abs_tally / flux_tally);
+		meshCell->setSigmaT(tot_tally / flux_tally);
+		meshCell->setSigmaF(fis_tally / flux_tally);
+		meshCell->setNuSigmaF(nu_fis_tally / flux_tally);
+
+		log_printf(NORMAL, "meshCell: %i sigmaT: %f", i, tot_tally / flux_tally);
+		log_printf(NORMAL, "meshCell: %i sigmaA: %f", i, abs_tally / flux_tally);
+		log_printf(NORMAL, "meshCell: %i sigmaF: %f", i, fis_tally / flux_tally);
+		log_printf(NORMAL, "meshCell: %i NuSigmaF: %f", i, nu_fis_tally / flux_tally);
+		log_printf(NORMAL, "meshCell: %i flux: %f", i, flux_tally);
+
+
+	}
+}
+
+
+

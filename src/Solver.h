@@ -24,9 +24,14 @@
 #include "FlatSourceRegion.h"
 #include "configurations.h"
 #include "log.h"
+#include "quickplot.h"
+#include "Mesh.h"
+#include "MeshCell.h"
+#include "Material.h"
 
-#include <omp.h>
-
+#if USE_OPENMP == true
+	#include <omp.h>
+#endif
 
 class Solver {
 private:
@@ -37,15 +42,17 @@ private:
 	int* _num_tracks;
 	int _num_azim;
 	int _num_FSRs;
-	double* _FSRs_to_fluxes[NUM_ENERGY_GROUPS + 1];
-	double* _FSRs_to_powers;
-	double* _FSRs_to_pin_powers;
+	double *_FSRs_to_fluxes[NUM_ENERGY_GROUPS + 1];
+	double *_FSRs_to_powers;
+	double *_FSRs_to_pin_powers;
+	double *_FSRs_to_fission_source;
+	double *_FSRs_to_scatter_source;
+	double *_FSRs_to_absorption[NUM_ENERGY_GROUPS + 1];
+	double *_FSRs_to_pin_absorption[NUM_ENERGY_GROUPS + 1];
 	double _k_eff;
 	std::queue<double> _old_k_effs;
 	Plotter* _plotter;
 	float* _pix_map_total_flux;
-	bool _plot_fluxes;
-	int* _pix_map_FSRs;
 #if !STORE_PREFACTORS
 	double* _pre_factor_array;
 	int _pre_factor_array_size;
@@ -56,7 +63,7 @@ private:
 	double computePreFactor(segment* seg, int energy, int angle);
 	void initializeFSRs();
 public:
-	Solver(Geometry* geom, TrackGenerator* track_generator, Plotter* plotter, bool plotFluxes);
+	Solver(Geometry* geom, TrackGenerator* track_generator, Plotter* plotter);
 	virtual ~Solver();
 	void zeroTrackFluxes();
 	void oneFSRFluxes();
@@ -64,15 +71,15 @@ public:
 	void computeRatios();
 	void updateKeff();
 	double** getFSRtoFluxMap();
-	void fixedSourceIteration(int max_iterations);
+	void fixedSourceIteration(int max_iterations, bool cmfd);
 	double computeKeff(int max_iterations);
 	void plotFluxes();
 	void checkTrackSpacing();
 	void computePinPowers();
-
-//#if !STORE_PREFACTORS
-//	void setTrackPrefactors(Track* track);
-//#endif
+	void cmfd();
+	void computeNetCurrent();
+	void computeCoeffs();
+	void computeXS(Mesh* mesh);
 };
 
 #endif /* SOLVER_H_ */

@@ -894,7 +894,18 @@ void XMLCALL Parser_XMLCallback_End(void *context,
 					     f->surface.coeffs[0],
 					     f->surface.coeffs[1],
 					     f->surface.coeffs[2]);
+		} else if (strcmp(f->surface.type, "cruciform") == 0) {
+			if (f->surface.coeffs_count != 4)
+				log_printf(ERROR, "Wrong number of coeffs");
+
+			surface = new Cruciform(f->surface.id, 
+					     f->surface.boundary,
+					     f->surface.coeffs[0],
+					     f->surface.coeffs[1],
+					     f->surface.coeffs[2],
+					     f->surface.coeffs[3]);
 		}
+
 		
 		if (surface != NULL)
 			s->parser->surfaces.push_back(surface);

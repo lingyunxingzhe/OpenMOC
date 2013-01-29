@@ -200,7 +200,7 @@ double Surface::getMinDistance(Point* point, double angle,
 
 		/* Determine which intersection point is nearest */
 		if (dist1 < dist2) {
-			distance = dist1;	double getRadius();
+			distance = dist1;
 
 			intersection->setX(intersections[0].getX());
 			intersection->setY(intersections[0].getY());
@@ -319,113 +319,6 @@ int Plane::intersection(Point* point, double angle, Point* points) {
 			return num;
 		}
 	}
-}
-
-
-/**
- * Finds the intersection points (0 or 1) of a track with a plane.
- * @param track the track of interest
- * @param points an array of two points where intersection points are stored
- * @return the number of intersection points (0 or 1)
- */
-int Plane::intersection(Track* track, Point* points) const {
-
-	double x0 = track->getStart()->getX();
-	double y0 = track->getStart()->getY();
-
-	int num = 0; 			/* number of intersections */
-	double xcurr, ycurr;	/* coordinates of current intersection point */
-
-	/* The track is vertical */
-	if ((fabs(track->getPhi() - (M_PI / 2))) < 1.0e-10) {
-
-		/* The plane is also vertical => no intersections */
-		if (_B == 0)
-			return 0;
-
-		/* The plane is not vertical */
-		else {
-			xcurr = x0;
-			ycurr = (-_A * x0 - _C) / _B;
-			points->setCoords(xcurr, ycurr);
-			if (track->contains(points))
-				num++;
-			return num;
-		}
-	}
-
-	/* If the track isn't vertical */
-	else {
-		double m = sin(track->getPhi()) / cos(track->getPhi());
-
-		/* The plane and track are parallel, no intersections */
-		if (fabs(-_A/_B - m) < 1e-5 && _B != 0)
-			return 0;
-
-		else {
-			xcurr = -(_B * (y0 - m * x0) + _C)
-					/ (_A + _B * m);
-			ycurr = y0 + m * (xcurr - x0);
-			points->setCoords(xcurr, ycurr);
-			if (track->contains(points))
-				num++;
-			return num;
-		}
-	}
-}
-
-
-/**
- * Finds the intersection points (0 or 1) of a plane with this plane.
- * @param plane the plane of interest
- * @param points an array of two points where intersection points are stored
- * @return the number of intersection points (0 or 1 for a plane)
- */
-int Plane::intersection(Plane* plane, Point* points) const {
-
-	double xcurr, ycurr;
-	int num = 0;			/* Number of intersection points */
-
-	/* If neither plane is vertical */
-	if (_B != 0 && plane->_B != 0) {
-
-		/* If planes are parallel, return 0 */
- 		if (_A == plane->_A)
-			return num;
- 		/* If planes are not parallel, they have an intersection point */
-		else {
-			xcurr = (plane->_C - _C) / (_A - plane->_A);
-			ycurr = -plane->_C - plane->_A * xcurr;
-			points[num].setX(xcurr);
-			points[num].setY(ycurr);
-			num++;
-			return num;
-		}
-	}
-
-	/* If this plane is vertical but parameter plane is non-vertical */
-	else if (_B == 0 && plane->_B != 0) {
-		xcurr = -_C;
-		ycurr = _C * plane->_A - plane->_C;
-		points[num].setX(xcurr);
-		points[num].setY(ycurr);
-		num++;
-		return num;
-	}
-
-	/* If this plane is non-vertical but parameter plane is vertical */
-	else if (_B != 0 && plane->_B == 0) {
-		xcurr = -plane->_C;
-		ycurr = plane->_C * _A - _C;
-		points[num].setX(xcurr);
-		points[num].setY(ycurr);
-		num++;
-		return num;
-	}
-
-	/* Both planes are vertical => no intersections points */
-	else
-		return num;
 }
 
 
@@ -616,7 +509,7 @@ Circle::Circle(const int id, const boundaryType boundary, const double x,
  * Return the radius of the circle
  * @return the radius of the circle
  */
-double Circle::getRadius() {
+double Circle::getScale() {
 	return this->_radius;
 }
 
@@ -762,232 +655,6 @@ int Circle::intersection(Point* point, double angle, Point* points) {
 
 
 /**
- * Finds the intersection points (0, 1, or 2) of a track with a circle
- * @param track the track of interest
- * @param points an array of two points where the intersection points are stored
- * @return the number of intersection points (0, 1 or 2 for a circle)
- */
-int Circle::intersection(Track* track, Point* points) const {
-
-	double x0 = track->getStart()->getX();
-	double y0 = track->getStart()->getY();
-	double xcurr, ycurr;
-	int num = 0;			/* Number of intersection points */	double getRadius();
-
-	double a, b, c, q, discr;
-
-	/* If the track is vertical */
-	if ((fabs(track->getPhi() - (M_PI / 2))) < 1.0e-10) {
-		/* Solve for where the line x = x0 and the surface F(x,y) intersect
-		 * Find the y where F(x0, y) = 0			if (track->contains(points))
-				num++;
-		 *
-		 * Substitute x0 into F(x,y) and rearrange to put in
-		 * the form of the quadratic formula: ay^2 + by + c = 0
-		 */
-		a = _B * _B;
-		b = _D;
-		c = _A * x0 * x0 + _C * x0 + _E;
-
-		discr = b*b - 4*a*c;
-
-		/* There are no intersections */
-		if (discr < 0)
-			return 0;
-
-		/* There is one intersection (ie on the surface) */
-		else if (discr == 0) {
-			xcurr = x0;
-			ycurr = -b / (2*a);
-			points[num].setCoords(xcurr, ycurr);
-			if (track->contains(&points[num]))
-				num++;
-
-			return num;
-		}
-
-		/* There are two intersections */
-		else {
-			xcurr = x0;
-			ycurr = (-b + sqrt(discr)) / (2 * a);
-			points[num].setCoords(xcurr, ycurr);
-			if (track->contains(&points[num]))
-				num++;
-
-			xcurr = x0;
-			ycurr = (-b - sqrt(discr)) / (2 * a);
-			points[num].setCoords(xcurr, ycurr);
-			if (track->contains(&points[num]))
-				num++;
-			return num;
-		}
-	}
-
-	/* If the track isn't vertical */
-	else {
-
-		/*Solve for where the line y-y0 = m*(x-x0) and the surface F(x,y)
-		 * intersect
-		 * Find the (x,y) where F(x, y0 + m*(x-x0)) = 0
-		 * Substitute the point-slope formula for y into F(x,y) and rearrange
-		 * to put in the form of the quadratic formula: ax^2 + bx + c = 0
-		 * double m = sin(track->getPhi()) / cos(track->getPhi());
-		 */
-		double m = sin(track->getPhi()) / cos(track->getPhi());
-		q = y0 - m * x0;
-		a = _A + _B * _B * m * m;
-		b = 2 * _B * m * q + _C + _D * m;
-		c = _B * q * q + _D * q + _E;
-
-		discr = b*b - 4*a*c;
-
-		/* There are no intersections */
-		if (discr < 0)
-			return 0;
-
-		/* There is one intersection (ie on the surface) */
-		else if (discr == 0) {
-			xcurr = -b / (2*a);
-			ycurr = y0 + m * (points[0].getX() - x0);
-			points[num].setCoords(xcurr, ycurr);
-			if (track->contains(&points[num]))
-				num++;
-			return num;
-		}
-
-
-		/* There are two intersections */
-		else {
-			xcurr = (-b + sqrt(discr)) / (2*a);
-			ycurr = y0 + m * (xcurr - x0);
-			points[num].setCoords(xcurr, ycurr);
-			if (track->contains(&points[num]))
-				num++;
-
-			xcurr = (-b - sqrt(discr)) / (2*a);
-			ycurr = y0 + m * (xcurr - x0);
-			points[num].setCoords(xcurr, ycurr);
-			if (track->contains(&points[num]))
-				num++;
-
-			return num;
-		}
-	}
-}
-
-
-/**
- * Finds the intersection points (0, 1, or 2) of a plane with a circle
- * @param plane the plane of interest
- * @param points an array of two points where intersection points are stored
- * @return the number of intersection points (0, 1 or 2 for a circle)
- */
-int Circle::intersection(Plane* plane, Point* points) const {
-
-	float xcurr, ycurr;
-	int num = 0;
-	float a, b, c, discr;
-
-	/* If the plane is vertical */
-	if (plane->_B == 0) {
-
-		/* Solve for where the plane F(x,y) = x + F1 and
-		 * the circle F(x,y) = x^2 + y^2 + D2*x + E2*y + F2 intersect
-		 * Set F(x,y) for the plane equal to zero, rearrange for x,
-		 * and substitute into the F(x,y) for the circle.
-		 * Rearrange to put in the form of the quadratic formula:
-		 * ay^2 + by + c = 0
-		 * Solve for y and find x from the equation for the plane
-		 */
-		a = 1;
-		b = _D;
-		c = _E - plane->_C * this->_C + plane->_C * plane->_C;
-
-		discr = b*b - 4*a*c;
-
-		/* There are no intersections */
-		if (discr < 0)
-			return 0;
-
-		/* There is one intersection (ie on the surface) */
-		else if (discr == 0) {
-			xcurr = -plane->_C;
-			ycurr = -b / (2*a);
-			points[num].setX(xcurr);
-			points[num].setY(ycurr);
-			num++;
-			return num;
-		}
-
-		/* There are two intersections */
-		else {
-			xcurr = -plane->_C;
-			ycurr = (-b + sqrt(discr)) / (2*a);
-			points[num].setX(xcurr);
-			points[num].setY(ycurr);
-			num++;
-
-			ycurr = (-b - sqrt(discr)) / (2*a);
-			points[num].setX(xcurr);
-			points[num].setY(ycurr);
-			num++;
-
-			return num;
-		}
-	}
-
-	/* If the plane isn't vertical */
-	else {
-		/* Solve for where the plane F(x,y) = D1*x + y + F1 and
-		 * the circle F(x,y) = x^2 + y^2 + D2*x + E2*y + F2 intersect
-		 * Set F(x,y) for the plane equal to zero, rearrange for y,
-		 * and substitute into the F(x,y) for the circle.
-		 * Rearrange to put in the form of the quadratic formula:
-		 * ax^2 + bx + c = 0	double getRadius();
-		 *
-		 * Solve for x and find y from the equation for the plane
-		 */
-		a = 1 + plane->_A * plane->_A;
-		b = 2 * plane->_C * plane->_A + this->_C - this->_D * plane->_A;
-		c = plane->_C * plane->_C + this->_E - this->_D * plane->_C;
-
-		discr = b * b - 4 * a * c;
-
-		/* There are no intersections */
-		if (discr < 0) {
-			return 0;
-		}
-
-		/* There is one intersection (ie on the surface) */
-		else if (discr == 0) {
-			xcurr = -b / (2*a);
-			ycurr = -plane->_C - plane->_A * xcurr;
-			points[num].setX(xcurr);
-			points[num].setY(ycurr);
-			num++;
-			return num;
-		}
-
-		/* There are two intersections */
-		else {
-			xcurr = (-b + sqrt(discr)) / (2*a);
-			ycurr = -plane->_C - plane->_A * xcurr;
-			points[num].setX(xcurr);
-			points[num].setY(ycurr);
-			num++;
-
-			xcurr = (-b - sqrt(discr)) / (2*a);
-			ycurr = -plane->_C - plane->_A * xcurr;
-			points[num].setX(xcurr);
-			points[num].setY(ycurr);
-			num++;
-			return num;
-		}
-	}
-}
-
-
-/**
  * Converts this Plane's attributes to a character array
  * @param a character array of this plane's attributes
  */
@@ -1022,3 +689,173 @@ double Circle::getYMax(){
 }
 
 
+Cruciform::Cruciform(const int id, const boundaryType boundary,
+    const double _x, const double _y, 
+    const double _scale, const double _rotation): Surface(id, CRUCIFORM, boundary) {
+    x = _x;
+    y = _y;
+	scale = _scale;
+    rotation = _rotation;
+}
+
+double resqrt(double x) {
+    return x >= 0 ? sqrt(x) : 0;
+}
+
+/**
+ * Evaluate a point using the circle's quadratic surface equation
+ * @param point a pointer to the point of interest
+ * @return the value of point in the equation
+ */
+
+double Cruciform::evaluate(const Point* point) const {
+    double rx = (point->getX() - x)/scale;
+    double ry = (point->getY() - y)/scale;
+    return cruci(rx, ry, rotation);
+}
+
+double Cruciform::cruci(double px, double py, double rot) {
+    double uax = px*cos(-rot) - py*sin(-rot);
+    double uay = px*sin(-rot) + py*cos(-rot);
+
+	double ax = abs(uax);
+	double ay = abs(uay);
+
+    // I've added a term so that we don't go to zero beyond x = 0.719...
+
+    double ret =  ay - (
+        (ax <= 0.18585) * (resqrt(0.03454 - pow(ax, 2)) + 0.5334) +
+        (ax > 0.18585) * (ax <= 0.5334) * (0.5334 - resqrt(0.120756 - pow(ax - 0.5334, 2))) +
+        (ax > 0.5334) * (ax < 0.719249402) * resqrt(0.03454 - pow(ax - 0.5334, 2)) +
+        (ax >= 0.719249402) * (ay - resqrt(pow(ax,2) + pow(ay,2)) + 0.719249402));
+    return ret;
+}
+
+
+Point* Cruciform::scalarsecant(double x_n, double x_nm1, Point* initial, double angle) {
+    double x0 = (initial->getX() - x) / scale;
+    double y0 = (initial->getY() - y) / scale;
+    double delx = cos(angle);
+    double dely = sin(angle);
+
+    double y_n, y_nm1, dx;
+    int max_iterations = 1000;
+
+    y_nm1 = cruci(x_nm1 * delx + x0, x_nm1 * dely + y0, rotation);
+    y_n   = cruci(x_n * delx + x0, x_n * dely + y0, rotation);
+
+    if (abs(y_n) > abs(y_nm1)){
+        swap(x_nm1, x_n);
+        swap(y_nm1, y_n);
+    }
+
+    for(int iters=0; iters<max_iterations; iters++) {
+        if(y_n == y_nm1)
+            return (Point*)0;
+        dx = y_n * (x_n - x_nm1) / (y_n - y_nm1);
+        if(abs(y_n) < EPSILON && abs(x_n - x_nm1) < EPSILON)
+            if(x_n < 2)         // a failsafe against nan
+                return new Point(x_n * delx + x0, x_n * dely + y0);
+        x_nm1 = x_n;
+        x_n = x_n - dx;
+        y_nm1 = y_n;
+        y_n = cruci(x_n * delx + x0, x_n * dely + y0, rotation);
+    }
+
+    return (Point*)0;
+}
+
+
+/**
+ * Finds the intersection point with this circle from a given point and
+ * trajectory defined by an angle (0, 1, or 2 points)
+ * @param point pointer to the point of interest
+ * @param angle the angle defining the trajectory in radians
+ * @param points pointer to a an array of points to store intersection points
+ * @return the number of intersection points (0 or 1)
+ */
+int Cruciform::intersection(Point* point, double angle, Point* points) {
+    double xn, xnm1;
+    Point* cur;
+    vector<Point*> intersections;
+    int num = 0;
+
+    bool breaking; // <- this can be done with gotos but it's unsafe
+
+    for(double xx=-1.0; xx <= 1; xx += 0.1)
+    {
+        breaking = 0;
+        xn = xx - 0.05;
+        xnm1 = xx + 0.05;
+        cur = scalarsecant(xn, xnm1, point, angle);
+
+        if(!cur)
+            continue;
+
+        for(int i=0; i<(int)intersections.size(); i++) {
+            if(abs(cur->getX() - intersections[i]->getX()) < EPSILON &&
+               abs(cur->getY() - intersections[i]->getY()) < EPSILON) {
+                breaking = 1;
+                delete cur;
+                break;
+            }
+        }
+
+        if(breaking)
+            continue;
+
+        intersections.push_back(cur);
+
+        //printf("INTER (%f, %f)\n", cur->getX(), cur->getY());
+    }
+
+    // I think this function should really be returning a vector,
+    // but I'll use this minor boilerplate to deal with this
+    int mnum = min(2, (int)intersections.size());
+    
+    for(num=0; num < mnum; num++) {
+        points[num].setCoords(intersections[num]->getX(),
+                intersections[num]->getY());
+        delete intersections[num];
+    }
+    return mnum;
+}
+
+/**
+ * Converts this Plane's attributes to a character array
+ * @param a character array of this plane's attributes
+ */
+string Cruciform::toString() {
+	stringstream string;
+
+	string << "Surface type = CRUCIFORM " << " x = "
+			<< x << ", y = " << y << ", x0 = " << center.getX() 
+			<< ", y0 = " << center.getY() << ", scale = " << scale;
+
+	return string.str();
+}
+
+
+double Cruciform::getXMin(){
+	log_printf(ERROR, "Cruciform::getXMin not implemented");
+	return -1.0/0.0;
+}
+
+double Cruciform::getXMax(){
+	log_printf(ERROR, "Cruciform::getXMax not implemented");
+	return 1.0/0.0;
+}
+
+double Cruciform::getYMin(){
+	log_printf(ERROR, "Cruciform::getYMin not implemented");
+	return -1.0/0.0;
+}
+
+double Cruciform::getYMax(){
+	log_printf(ERROR, "Cruciform::getYMax not implemented");
+	return 1.0/0.0;
+}
+
+double Cruciform::getScale() {
+    return scale;
+}
