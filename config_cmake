@@ -1,0 +1,11 @@
+cmake                                              \
+-G "Eclipse CDT4 - Unix Makefiles"                 \
+-D CMAKE_BUILD_TYPE=Debug                        \
+-D Silo_DIR=/home/robertsj/opt/silo/4.7.2/         \
+-D SERMENT_ENABLE_DBC=NO                           \
+-D PETSC_DIR=/home/robertsj/opt/petsc/petsc-3.2-p5 \
+-D PETSC_ARCH=gcc-4.5.2-acml-4.4.0-release         \
+-D SLEPC_DIR=/home/robertsj/opt/slepc/slepc-3.2-p3 \
+-D SLEPC_ARCH=gcc-4.5.2-acml-4.4.0-release         \
+/home/robertsj/Research/serment/serment
+
