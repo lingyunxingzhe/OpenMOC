@@ -424,7 +424,8 @@ void Solver::checkTrackSpacing() {
 
 
 	/* Loop over all FSRs and if one FSR does not have tracks in it, print
-	 * error message to the screen and exit program */
+	 * error message to the screen and exit program 
+    */
 	for (int i=0; i < _num_FSRs; i++) {
 		if (FSR_segment_tallies[i] == 0) {
 			cell = _geom->findCell(i);

@@ -200,7 +200,7 @@ double Surface::getMinDistance(Point* point, double angle,
 
 		/* Determine which intersection point is nearest */
 		if (dist1 < dist2) {
-			distance = dist1;	double getRadius();
+			distance = dist1;
 
 			intersection->setX(intersections[0].getX());
 			intersection->setY(intersections[0].getY());
@@ -509,7 +509,7 @@ Circle::Circle(const int id, const boundaryType boundary, const double x,
  * Return the radius of the circle
  * @return the radius of the circle
  */
-double Circle::getRadius() {
+double Circle::getScale() {
 	return this->_radius;
 }
 
@@ -689,11 +689,13 @@ double Circle::getYMax(){
 }
 
 
-Cruciform::Cruciform(const int id, const boundaryType boundary, const double _x,
-	const double _y, const double _scale): Surface(id, CRUCIFORM, boundary) {
+Cruciform::Cruciform(const int id, const boundaryType boundary,
+    const double _x, const double _y, 
+    const double _scale, const double _rotation): Surface(id, CRUCIFORM, boundary) {
     x = _x;
     y = _y;
 	scale = _scale;
+    rotation = _rotation;
 }
 
 double resqrt(double x) {
@@ -709,12 +711,15 @@ double resqrt(double x) {
 double Cruciform::evaluate(const Point* point) const {
     double rx = (point->getX() - x)/scale;
     double ry = (point->getY() - y)/scale;
-    return cruci(rx, ry);
+    return cruci(rx, ry, rotation);
 }
 
-double Cruciform::cruci(double px, double py) {
-	double ax = abs(px);
-	double ay = abs(py);
+double Cruciform::cruci(double px, double py, double rot) {
+    double uax = px*cos(-rot) - py*sin(-rot);
+    double uay = px*sin(-rot) + py*cos(-rot);
+
+	double ax = abs(uax);
+	double ay = abs(uay);
 
     // I've added a term so that we don't go to zero beyond x = 0.719...
 
@@ -722,7 +727,7 @@ double Cruciform::cruci(double px, double py) {
         (ax <= 0.18585) * (resqrt(0.03454 - pow(ax, 2)) + 0.5334) +
         (ax > 0.18585) * (ax <= 0.5334) * (0.5334 - resqrt(0.120756 - pow(ax - 0.5334, 2))) +
         (ax > 0.5334) * (ax < 0.719249402) * resqrt(0.03454 - pow(ax - 0.5334, 2)) +
-        (ax >= 0.719249402) * (ay - sqrt(pow(ax,2) + pow(ay,2)) + 0.719249402));
+        (ax >= 0.719249402) * (ay - resqrt(pow(ax,2) + pow(ay,2)) + 0.719249402));
     return ret;
 }
 
@@ -736,8 +741,8 @@ Point* Cruciform::scalarsecant(double x_n, double x_nm1, Point* initial, double 
     double y_n, y_nm1, dx;
     int max_iterations = 1000;
 
-    y_nm1 = cruci(x_nm1 * delx + x0, x_nm1 * dely + y0);
-    y_n   = cruci(x_n * delx + x0, x_n * dely + y0);
+    y_nm1 = cruci(x_nm1 * delx + x0, x_nm1 * dely + y0, rotation);
+    y_n   = cruci(x_n * delx + x0, x_n * dely + y0, rotation);
 
     if (abs(y_n) > abs(y_nm1)){
         swap(x_nm1, x_n);
@@ -749,11 +754,12 @@ Point* Cruciform::scalarsecant(double x_n, double x_nm1, Point* initial, double 
             return (Point*)0;
         dx = y_n * (x_n - x_nm1) / (y_n - y_nm1);
         if(abs(y_n) < EPSILON && abs(x_n - x_nm1) < EPSILON)
-            return new Point((x_n - dx) * delx + x0, (x_n - dx) * dely + y0);
+            if(x_n < 2)         // a failsafe against nan
+                return new Point(x_n * delx + x0, x_n * dely + y0);
         x_nm1 = x_n;
         x_n = x_n - dx;
         y_nm1 = y_n;
-        y_n = cruci(x_n * delx + x0, x_n * dely + y0);
+        y_n = cruci(x_n * delx + x0, x_n * dely + y0, rotation);
     }
 
     return (Point*)0;
@@ -850,8 +856,6 @@ double Cruciform::getYMax(){
 	return 1.0/0.0;
 }
 
-double Cruciform::getRadius() {
+double Cruciform::getScale() {
     return scale;
 }
-
-

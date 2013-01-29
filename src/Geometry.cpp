@@ -378,8 +378,7 @@ void Geometry::addCell(Cell* cell) {
 				   of the inner-most circle */
 				iter = cells_surfaces.begin();
 				surface_id = abs(iter->first);
-				r0 =  (dynamic_cast<Circle*>
-					   (_surfaces.at(surface_id)))->getRadius();
+				r0 =  _surfaces.at(surface_id)->getScale();
 				r1 = r0 / sqrt(t_num_rings);
 				rold = r1;
 				
@@ -469,10 +468,8 @@ void Geometry::addCell(Cell* cell) {
 				}
 			      
 				/* get the cell's two radii */
-				r01=(dynamic_cast<Circle*>(_surfaces.at(inner_surface)))
-					->getRadius();
-				r02=(dynamic_cast<Circle*>(_surfaces.at(outer_surface)))
-					->getRadius();
+				r01=_surfaces.at(inner_surface)->getScale();
+				r02=_surfaces.at(outer_surface)->getScale();
 				log_printf(INFO, "Read a ring with radii %f and %f", r01, r02);
 			
 				/* generate the inner-most radius */

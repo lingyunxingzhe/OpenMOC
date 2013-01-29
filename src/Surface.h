@@ -84,6 +84,7 @@ public:
 	virtual double getXMax() =0;
 	virtual double getYMin() =0;
 	virtual double getYMax() =0;
+    virtual double getScale() {return 0;};
 	bool onSurface(Point* point);
 	bool onSurface(LocalCoords* coord);
 	double getMinDistance(Point* point, double angle, Point* intersection);
@@ -158,7 +159,7 @@ public:
 	virtual double getXMax();
 	virtual double getYMin();
 	virtual double getYMax();
-	double getRadius();
+    double getScale();
 };
 
 class Cruciform: public Surface {
@@ -166,13 +167,14 @@ private:
 	Point center;
     double x, y;
 	double scale;
+    double rotation;
 	friend class Surface;
 	friend class Plane;
 public:
 	Cruciform(const int id, const boundaryType boundary, const double _x,
-				const double _y, const double _scale);
+		const double _y, const double _scale, const double _rotation);
 	double evaluate(const Point* point) const;
-    static double cruci(double px, double py);
+    static double cruci(double px, double py, double rot);
     Point* scalarsecant(double x_n, double x_nm1, Point* initial, double angle);
 	int intersection(Point* point, double angle, Point* points);
 	string toString();
@@ -181,7 +183,7 @@ public:
 	virtual double getXMax();
 	virtual double getYMin();
 	virtual double getYMax();
-	double getRadius();
+    double getScale();
 };
 
 
