@@ -470,7 +470,7 @@ void TrackGenerator::segmentize() {
 			track = &_tracks[i][j];
 
 			_geom->segmentize(track);
-			log_printf(DEBUG, "Segmented track phi: %f...", phi);
+			log_printf(NORMAL, "Segmented track phi: %f...", phi);
 
 			/* plot segments */
 			if (_plotter->plotSpecs() == true){
@@ -478,7 +478,7 @@ void TrackGenerator::segmentize() {
 				y0 = track->getStart()->getY();
 				num_segments = track->getNumSegments();
 				for (int k=0; k < num_segments; k++){
-					log_printf(DEBUG, "Segmented segment: %f...", num_segments);
+					log_printf(NORMAL, "Segmented segment: %f...", num_segments);
 					x1 = x0 + cos_phi * track->getSegment(k)->_length;
 					y1 = y0 + sin_phi * track->getSegment(k)->_length;
 					drawLine(bitMap, x0, y0, x1, y1, track->getSegment(k)->_region_id);
@@ -489,7 +489,7 @@ void TrackGenerator::segmentize() {
 		}
 	}
 
-	log_printf(DEBUG, "Done segmenting...");
+	log_printf(NORMAL, "Done segmenting...");
 
 	if (_plotter->plotSpecs() == true){
 		/* plot segments, FSRs, cells, and materials */

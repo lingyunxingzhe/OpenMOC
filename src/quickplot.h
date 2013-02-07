@@ -164,6 +164,7 @@ void plotSilo(BitMap<U>* bitMap, float* pixMap, std::string name, std::string ex
 template <typename U>
 void plotMagick(BitMap<U>* bitMap, float* pixMap, std::string name, std::string extension){
 	printf("Writing Magick bitmap...\n");
+//    return;
 
 	/* declare variables */
 	float* color = new float[3];

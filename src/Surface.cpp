@@ -782,7 +782,7 @@ int Cruciform::intersection(Point* point, double angle, Point* points) {
 
     bool breaking; // <- this can be done with gotos but it's unsafe
 
-    for(double xx=-1.0; xx <= 1; xx += 0.1)
+    for(double xx=-1.0; xx <= 1; xx += 0.5)
     {
         breaking = 0;
         xn = xx - 0.05;
@@ -806,16 +806,17 @@ int Cruciform::intersection(Point* point, double angle, Point* points) {
 
         intersections.push_back(cur);
 
-        //printf("INTER (%f, %f)\n", cur->getX(), cur->getY());
+        printf("INTER (%f, %f)\n", cur->getX(), cur->getY());
     }
 
     // I think this function should really be returning a vector,
     // but I'll use this minor boilerplate to deal with this
     int mnum = min(2, (int)intersections.size());
     
-    for(num=0; num < mnum; num++) {
-        points[num].setCoords(intersections[num]->getX(),
-                intersections[num]->getY());
+    for(num=1; num < (int)intersections.size(); num++) {
+        if(num-1 < mnum)
+            points[num].setCoords(intersections[num]->getX(),
+                    intersections[num]->getY());
         delete intersections[num];
     }
     return mnum;

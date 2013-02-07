@@ -12,12 +12,13 @@
 #include <sstream>
 #include <string>
 #include <cmath>
+#include <unordered_set>
 #include "Point.h"
 #include "Track.h"
 #include "Cell.h"
 #include "LocalCoords.h"
 
-#define EPSILON 1E-8
+#define EPSILON 1E-6
 
 class LocalCoords;
 
