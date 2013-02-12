@@ -699,6 +699,8 @@ Cruciform::Cruciform(const int id, const boundaryType boundary,
 }
 
 Cruciform::~Cruciform() {
+
+#ifdef CRUCIMEMOIZE
     // Delete our memoized intersection map
     unordered_map<long, vector<Point*>* >::iterator it;
     int j;
@@ -708,6 +710,7 @@ Cruciform::~Cruciform() {
             delete it->second->at(j);
         delete it->second;
     }
+#endif
 }
 
 double resqrt(double x) {
@@ -766,7 +769,7 @@ Point* Cruciform::scalarsecant(double x_n, double x_nm1, Point* initial, double 
             return (Point*)0;
         dx = y_n * (x_n - x_nm1) / (y_n - y_nm1);
         if(abs(y_n) < EPSILON && abs(x_n - x_nm1) < EPSILON) {
-            if(x_n < 2 && x_n > 0)         // a failsafe against nan
+            if(x_n < 2 && x_n > 0)
                 return new Point(
                     x + scale * (x_n * delx + x0),
                     y + scale * (x_n * dely + y0));
@@ -802,7 +805,6 @@ long hash_point_angle(Point* point, double angle) {
  * @return the number of intersection points (0 or 1)
  */
 int Cruciform::intersection(Point* point, double angle, Point* points) {
-    // printf("\nARGZ: (%.3f, %.3f), %.3f\n", point->getX(), point->getY(), angle);
     double xn, xnm1;
     long curhash;
     Point* cur;
@@ -812,13 +814,12 @@ int Cruciform::intersection(Point* point, double angle, Point* points) {
     unordered_set<long> matches;
     long curargs = hash_point_angle(point, angle);
 
+#ifdef CRUCIMEMOIZE
     if(memintersections[curargs]) {
-        // Waiting test: int asdf; scanf("%d", &asdf);
-        // printf("PASSEDOVER: %ld\n", curargs);
         intersections = memintersections[curargs];
     } else {
+#endif
         matches.insert(curargs);
-        // printf("HASHED: %ld\n", hash_point_angle(point, angle));
 
         for(double xx=0.1; xx <= 1.0; xx += 0.3)
         {
@@ -830,22 +831,19 @@ int Cruciform::intersection(Point* point, double angle, Point* points) {
                 continue;
 
             curhash = hash_point_angle(cur, angle);
-            //printf("CURPT: %.3f\t%.3f\n", cur->getX(), cur->getY());
-            //printf("HASHED: %ld\n", curhash);
 
             if (matches.count(curhash)) {
-                //printf("DELETED\n");
                 delete cur;
                 continue;
             }
 
             matches.insert(curhash);
             intersections->push_back(cur);
-
-            //printf("INTER (%f, %f)\n", cur->getX(), cur->getY());
         }
+#ifdef CRUCIMEMOIZE
         memintersections[curargs] = intersections;
     }
+#endif
 
     // I think this function should really be returning a vector,
     // but I'll use this minor boilerplate to deal with this

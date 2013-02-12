@@ -23,6 +23,9 @@
 #define MATCHSHIFT 1E4
 #define MATCHBITS 16
 
+// if you want to enable memoization for the Cruciform
+#define CRUCIMEMOIZE
+
 class LocalCoords;
 
 #include "log.h"
@@ -172,7 +175,9 @@ private:
     double x, y;
 	double scale;
     double rotation;
+#ifdef CRUCIMEMOIZE
     unordered_map<long, vector<Point*>* > memintersections;
+#endif
 	friend class Surface;
 	friend class Plane;
 public:
