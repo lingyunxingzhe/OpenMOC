@@ -765,11 +765,14 @@ Point* Cruciform::scalarsecant(double x_n, double x_nm1, Point* initial, double 
         if(y_n == y_nm1)
             return (Point*)0;
         dx = y_n * (x_n - x_nm1) / (y_n - y_nm1);
-        if(abs(y_n) < EPSILON && abs(x_n - x_nm1) < EPSILON)
-            if(x_n < 2)         // a failsafe against nan
+        if(abs(y_n) < EPSILON && abs(x_n - x_nm1) < EPSILON) {
+            if(x_n < 2 && x_n > 0)         // a failsafe against nan
                 return new Point(
                     x + scale * (x_n * delx + x0),
                     y + scale * (x_n * dely + y0));
+            else
+                return (Point*)0;
+        }
         x_nm1 = x_n;
         x_n = x_n - dx;
         y_nm1 = y_n;
@@ -817,7 +820,7 @@ int Cruciform::intersection(Point* point, double angle, Point* points) {
         matches.insert(curargs);
         // printf("HASHED: %ld\n", hash_point_angle(point, angle));
 
-        for(double xx=-1.0; xx <= 1; xx += 0.7)
+        for(double xx=0.1; xx <= 1.0; xx += 0.3)
         {
             xn = xx - 0.05;
             xnm1 = xx + 0.05;
