@@ -698,6 +698,21 @@ Cruciform::Cruciform(const int id, const boundaryType boundary,
     rotation = _rotation;
 }
 
+Cruciform::~Cruciform() {
+
+#ifdef CRUCIMEMOIZE
+    // Delete our memoized intersection map
+    unordered_map<long, vector<Point*>* >::iterator it;
+    int j;
+    for(it=memintersections.begin(); it!=memintersections.end(); ++it)
+    {
+        for(j=0; j<(int)it->second->size(); j++)
+            delete it->second->at(j);
+        delete it->second;
+    }
+#endif
+}
+
 double resqrt(double x) {
     return x >= 0 ? sqrt(x) : 0;
 }
@@ -739,7 +754,7 @@ Point* Cruciform::scalarsecant(double x_n, double x_nm1, Point* initial, double 
     double dely = sin(angle);
 
     double y_n, y_nm1, dx;
-    int max_iterations = 1000;
+    int max_iterations = 100;
 
     y_nm1 = cruci(x_nm1 * delx + x0, x_nm1 * dely + y0, rotation);
     y_n   = cruci(x_n * delx + x0, x_n * dely + y0, rotation);
@@ -753,9 +768,14 @@ Point* Cruciform::scalarsecant(double x_n, double x_nm1, Point* initial, double 
         if(y_n == y_nm1)
             return (Point*)0;
         dx = y_n * (x_n - x_nm1) / (y_n - y_nm1);
-        if(abs(y_n) < EPSILON && abs(x_n - x_nm1) < EPSILON)
-            if(x_n < 2)         // a failsafe against nan
-                return new Point(x_n * delx + x0, x_n * dely + y0);
+        if(abs(y_n) < EPSILON && abs(x_n - x_nm1) < EPSILON) {
+            if(x_n < 2 && x_n > 0)
+                return new Point(
+                    x + scale * (x_n * delx + x0),
+                    y + scale * (x_n * dely + y0));
+            else
+                return (Point*)0;
+        }
         x_nm1 = x_n;
         x_n = x_n - dx;
         y_nm1 = y_n;
@@ -765,6 +785,16 @@ Point* Cruciform::scalarsecant(double x_n, double x_nm1, Point* initial, double 
     return (Point*)0;
 }
 
+// See if any of the approximations of previous points match
+long hash_point_angle(Point* point, double angle) {
+    long x = (long)abs(floor(point->getX() * MATCHSHIFT));
+    long y = (long)abs(floor(point->getY() * MATCHSHIFT));
+    long a = (long)abs(floor(angle * MATCHSHIFT));
+    long xs = (long)(point->getX() > 0.0);
+    long ys = (long)(point->getY() > 0.0);
+    return ((2*xs + ys) << (3*MATCHBITS)) |
+        (a << (MATCHBITS*2)) | (x << MATCHBITS) | y;
+}
 
 /**
  * Finds the intersection point with this circle from a given point and
@@ -776,48 +806,52 @@ Point* Cruciform::scalarsecant(double x_n, double x_nm1, Point* initial, double 
  */
 int Cruciform::intersection(Point* point, double angle, Point* points) {
     double xn, xnm1;
+    long curhash;
     Point* cur;
-    vector<Point*> intersections;
+    vector<Point*>* intersections = new vector<Point*>();
     int num = 0;
 
-    bool breaking; // <- this can be done with gotos but it's unsafe
+    unordered_set<long> matches;
+    long curargs = hash_point_angle(point, angle);
 
-    for(double xx=-1.0; xx <= 1; xx += 0.1)
-    {
-        breaking = 0;
-        xn = xx - 0.05;
-        xnm1 = xx + 0.05;
-        cur = scalarsecant(xn, xnm1, point, angle);
+#ifdef CRUCIMEMOIZE
+    if(memintersections[curargs]) {
+        intersections = memintersections[curargs];
+    } else {
+#endif
+        matches.insert(curargs);
 
-        if(!cur)
-            continue;
+        for(double xx=0.1; xx <= 1.0; xx += 0.3)
+        {
+            xn = xx - 0.05;
+            xnm1 = xx + 0.05;
+            cur = scalarsecant(xn, xnm1, point, angle);
 
-        for(int i=0; i<(int)intersections.size(); i++) {
-            if(abs(cur->getX() - intersections[i]->getX()) < EPSILON &&
-               abs(cur->getY() - intersections[i]->getY()) < EPSILON) {
-                breaking = 1;
+            if(!cur)
+                continue;
+
+            curhash = hash_point_angle(cur, angle);
+
+            if (matches.count(curhash)) {
                 delete cur;
-                break;
+                continue;
             }
+
+            matches.insert(curhash);
+            intersections->push_back(cur);
         }
-
-        if(breaking)
-            continue;
-
-        intersections.push_back(cur);
-
-        //printf("INTER (%f, %f)\n", cur->getX(), cur->getY());
+#ifdef CRUCIMEMOIZE
+        memintersections[curargs] = intersections;
     }
+#endif
 
     // I think this function should really be returning a vector,
     // but I'll use this minor boilerplate to deal with this
-    int mnum = min(2, (int)intersections.size());
+    int mnum = min(2, (int)intersections->size());
     
-    for(num=0; num < mnum; num++) {
-        points[num].setCoords(intersections[num]->getX(),
-                intersections[num]->getY());
-        delete intersections[num];
-    }
+    for(num=0; num < mnum; num++) 
+        points[num].setCoords(intersections->at(num)->getX(),
+            intersections->at(num)->getY());
     return mnum;
 }
 

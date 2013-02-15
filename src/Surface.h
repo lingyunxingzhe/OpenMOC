@@ -12,12 +12,19 @@
 #include <sstream>
 #include <string>
 #include <cmath>
+#include <unordered_set>
+#include <unordered_map>
 #include "Point.h"
 #include "Track.h"
 #include "Cell.h"
 #include "LocalCoords.h"
 
-#define EPSILON 1E-8
+#define EPSILON 1E-6
+#define MATCHSHIFT 1E4
+#define MATCHBITS 16
+
+// if you want to enable memoization for the Cruciform
+#define CRUCIMEMOIZE
 
 class LocalCoords;
 
@@ -168,11 +175,15 @@ private:
     double x, y;
 	double scale;
     double rotation;
+#ifdef CRUCIMEMOIZE
+    unordered_map<long, vector<Point*>* > memintersections;
+#endif
 	friend class Surface;
 	friend class Plane;
 public:
 	Cruciform(const int id, const boundaryType boundary, const double _x,
 		const double _y, const double _scale, const double _rotation);
+    ~Cruciform();
 	double evaluate(const Point* point) const;
     static double cruci(double px, double py, double rot);
     Point* scalarsecant(double x_n, double x_nm1, Point* initial, double angle);

@@ -13,7 +13,7 @@
 
 
 /* Default logging level is the lowest (most verbose) level */
-logLevel log_level = NORMAL;
+logLevel log_level = DEBUG;
 
 
 /**
@@ -98,7 +98,7 @@ void log_setlevel(const char* newlevel) {
  * @param *format variable list of C++ formatted i/o
  */
 void log_printf(logLevel level, const char *format, ...) {
-    if (level >= log_level) {
+    if (level >= log_level || log_level == DEBUG) {
     	va_list args;
 
     	/* Append the log level to the message */
