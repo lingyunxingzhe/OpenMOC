@@ -111,7 +111,7 @@ void plotSilo(BitMap<U>* bitMap, float* pixMap, std::string name, std::string ex
 
 	/* Create file */
 	if (extension == "h5"){
-		file = DBCreate(title, DB_CLOBBER, DB_LOCAL, "structured mesh bitmap", DB_HDF5X);
+		file = DBCreate(title, DB_CLOBBER, DB_LOCAL, "structured mesh bitmap", DB_PDB);
 	}
 	else{
 		file = DBCreate(title, DB_CLOBBER, DB_LOCAL, "structured mesh bitmap", DB_PDB);
@@ -164,7 +164,7 @@ void plotSilo(BitMap<U>* bitMap, float* pixMap, std::string name, std::string ex
 template <typename U>
 void plotMagick(BitMap<U>* bitMap, float* pixMap, std::string name, std::string extension){
 	printf("Writing Magick bitmap...\n");
-    return;
+  //return;
 
 	/* declare variables */
 	float* color = new float[3];
