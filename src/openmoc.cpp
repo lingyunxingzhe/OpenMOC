@@ -57,11 +57,20 @@ int main(int argc, const char **argv) {
 	if (opts.compressCrossSections())
 		geometry.compressCrossSections();
 
-	Plotter plotter(&geometry, opts.getBitDimension(), opts.getExtension());
+	Plotter plotter(&geometry, opts.getBitDimension(), opts.getExtension(),
+			opts.plotSpecs(), opts.plotFluxes(), opts.plotCurrent());
 
 	/* Initialize the trackgenerator */
 	TrackGenerator track_generator(&geometry, &plotter, opts.getNumAzim(),
 				       opts.getTrackSpacing());
+
+	/* create CMFD Mesh */
+#if CMFD_ACCEL
+		geometry.makeCMFDMesh();
+		if (opts.plotSpecs()){
+			plotter.plotCMFDMesh(geometry.getMesh());
+		}
+#endif
 
 	/* Generate tracks */
 	timer.reset();
@@ -79,7 +88,7 @@ int main(int argc, const char **argv) {
 	timer.recordSplit("Segmenting tracks");
 
 	/* Fixed source iteration to solve for k_eff */
-	Solver solver(&geometry, &track_generator, &plotter, opts.plotFluxes());
+	Solver solver(&geometry, &track_generator, &plotter);
 	timer.reset();
 	timer.start();
 	k_eff = solver.computeKeff(MAX_ITERATIONS);
@@ -89,6 +98,9 @@ int main(int argc, const char **argv) {
 	/* Compute pin powers if requested at run time */
 	if (opts.computePinPowers())
 		solver.computePinPowers();
+
+	if (opts.cmfd())
+		solver.cmfd();
 
 	log_printf(RESULT, "k_eff = %f", k_eff);
 

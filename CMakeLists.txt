@@ -5,7 +5,11 @@
 project(OpenMOC)
 cmake_minimum_required(VERSION 2.6 FATAL_ERROR)
 set(OPENMOC_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+<<<<<<< HEAD
 LIST( APPEND CMAKE_MODULE_PATH "${OPENMOC_DIR}/CMake" )
+=======
+LIST( APPEND CMAKE_MODULE_PATH "${OPENMOC_DIR}" )
+>>>>>>> 67342fa6b04de129d8827d56ba9ce8d8676b3984
 
 #------------------------------------------------------------------------------#
 # OPTIONS

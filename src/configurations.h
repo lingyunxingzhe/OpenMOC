@@ -19,7 +19,7 @@
 #define GRP_TIMES_ANG NUM_POLAR_ANGLES*NUM_ENERGY_GROUPS
 
 /* Convergence threshold for computing k_eff */
-#define KEFF_CONVERG_THRESH 1E-5
+#define KEFF_CONVERG_THRESH 1E-6
 
 /* Convergence threshold for scalar flux in each region during fixed source
  * iteration */
@@ -40,7 +40,11 @@
 #define FSR_HASHMAP_PRECISION 5
 
 /* If this machine has OpenMP installed, define as true for parallel speedup */
-#define USE_OPENMP false
+#define USE_OPENMP true
+
+/* Perform CMFD acceleration in the solver on a lattice level */
+#define CMFD_ACCEL false
+#define CMFD_LEVEL 1
 
 
 /******************************************************************************
@@ -49,6 +53,7 @@
 
 #define FOUR_PI 12.5663706143
 #define ONE_OVER_FOUR_PI 0.0795774715
+#define PI 3.1415926536
 
 
 

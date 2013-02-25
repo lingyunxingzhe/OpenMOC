@@ -11,10 +11,20 @@
 #include <vector>
 #include <sstream>
 #include <string>
+#include <cmath>
+#include <unordered_set>
+#include <unordered_map>
 #include "Point.h"
 #include "Track.h"
 #include "Cell.h"
 #include "LocalCoords.h"
+
+#define EPSILON 1E-6
+#define MATCHSHIFT 1E4
+#define MATCHBITS 16
+
+// if you want to enable memoization for the Cruciform
+#define CRUCIMEMOIZE
 
 class LocalCoords;
 
@@ -30,6 +40,7 @@ class Cell;
 enum surfaceType {
 	PLANE,
 	CIRCLE,
+    CRUCIFORM,
 	XPLANE,
 	YPLANE,
 	QUADRATIC
@@ -44,7 +55,7 @@ enum boundaryType {
 	REFLECTIVE
 };
 
-
+using namespace std;
 
 /**
  * Represents a 2-dimensional quadratics surface
@@ -56,8 +67,8 @@ protected:
 	int _id;
 	surfaceType _type;
 	boundaryType _boundary;
-	std::vector<Cell*> _neighbor_pos;
-	std::vector<Cell*> _neighbor_neg;
+	vector<Cell*> _neighbor_pos;
+	vector<Cell*> _neighbor_neg;
 
 public:
 	Surface(const int id, const surfaceType type, 
@@ -66,8 +77,8 @@ public:
 	int getUid() const;
 	int getId() const;
 	surfaceType getType() const;
-	std::vector<Cell*> getNeighborPos();
-	std::vector<Cell*> getNeighborNeg();
+	vector<Cell*> getNeighborPos();
+	vector<Cell*> getNeighborNeg();
 	void setNeighborPosSize(int size);
 	void setNeighborNegSize(int size);
 	void setNeighborPos(int index, Cell* cell);
@@ -75,13 +86,12 @@ public:
 	boundaryType getBoundary();
 	virtual double evaluate(const Point* point) const =0;
 	virtual int intersection(Point* point, double angle, Point* points) =0;
-	virtual int intersection(Track* track, Point* points) const =0;
-	virtual int intersection(Plane* plane, Point* points) const =0;
-	virtual std::string toString() =0;
+	virtual string toString() =0;
 	virtual double getXMin() =0;
 	virtual double getXMax() =0;
 	virtual double getYMin() =0;
 	virtual double getYMax() =0;
+    virtual double getScale() {return 0;};
 	bool onSurface(Point* point);
 	bool onSurface(LocalCoords* coord);
 	double getMinDistance(Point* point, double angle, Point* intersection);
@@ -100,9 +110,7 @@ public:
 	Plane(const int id, const boundaryType boundary, const double A, const double B, const double C);
 	double evaluate(const Point* point) const;
 	int intersection(Point* point, double angle, Point* points);
-	int intersection(Track* track, Point* points) const;
-	int intersection(Plane* plane, Point* points) const;
-	std::string toString();
+	string toString();
 	virtual double getXMin();
 	virtual double getXMax();
 	virtual double getYMin();
@@ -117,7 +125,7 @@ class XPlane: public Plane {
 private:
 public:
 	XPlane(const int id, const boundaryType boundary, const double C);
-	std::string toString();
+	string toString();
 	virtual double getXMin();
 	virtual double getXMax();
 	virtual double getYMin();
@@ -131,7 +139,7 @@ class YPlane: public Plane {
 private:
 public:
 	YPlane(const int id, const boundaryType boundary, const double C);
-	std::string toString();
+	string toString();
 	virtual double getXMin();
 	virtual double getXMax();
 	virtual double getYMin();
@@ -153,14 +161,41 @@ public:
 				const double y, const double radius);
 	double evaluate(const Point* point) const;
 	int intersection(Point* point, double angle, Point* points);
-	int intersection(Track* track, Point* points) const;
-	int intersection(Plane* plane, Point* points) const;
-	std::string toString();
+	string toString();
 	virtual double getXMin();
 	virtual double getXMax();
 	virtual double getYMin();
 	virtual double getYMax();
-	double getRadius();
+    double getScale();
 };
+
+class Cruciform: public Surface {
+private:
+	Point center;
+    double x, y;
+	double scale;
+    double rotation;
+#ifdef CRUCIMEMOIZE
+    unordered_map<long, vector<Point*>* > memintersections;
+#endif
+	friend class Surface;
+	friend class Plane;
+public:
+	Cruciform(const int id, const boundaryType boundary, const double _x,
+		const double _y, const double _scale, const double _rotation);
+    ~Cruciform();
+	double evaluate(const Point* point) const;
+    static double cruci(double px, double py, double rot);
+    Point* scalarsecant(double x_n, double x_nm1, Point* initial, double angle);
+	int intersection(Point* point, double angle, Point* points);
+	string toString();
+
+	virtual double getXMin();
+	virtual double getXMax();
+	virtual double getYMin();
+	virtual double getYMax();
+    double getScale();
+};
+
 
 #endif /* SURFACE_H_ */

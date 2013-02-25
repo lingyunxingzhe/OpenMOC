@@ -8,6 +8,9 @@ SET( OPENMOC_SRC
   LocalCoords.cpp
   log.cpp
   Material.cpp
+  Mesh.cpp
+  MeshCell.cpp
+  MeshSurface.cpp
   openmoc.cpp
   Options.cpp
   Parser.cpp

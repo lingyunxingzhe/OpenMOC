@@ -22,17 +22,21 @@ private:
 	std::string _relative_path;
 	std::string _geometry_file;
 	std::string _material_file;
+
+	std::string _track_input_file;
+
 	std::string _extension;
 	double _track_spacing;
 	int _num_azim;
 	int _bit_dimension;
 	std::string _verbosity;
 	bool _dump_geometry;
-	bool _plot_materials;
-	bool _plot_cells;
+	bool _plot_specs;
 	bool _plot_fluxes;
 	bool _compute_pin_powers;
 	bool _compress_cross_sections;
+	bool _cmfd;
+	bool _plot_current;
 public:
     Options(int argc, const char **argv);
     ~Options(void);
@@ -44,11 +48,12 @@ public:
     double getTrackSpacing() const;
     const char* getVerbosity() const;
     std::string getExtension() const;
-    bool plotMaterials() const;
-    bool plotCells() const;
+    bool plotSpecs() const;
     bool plotFluxes() const;
     bool computePinPowers() const;
     bool compressCrossSections() const;
+	bool cmfd() const;
+	bool plotCurrent() const;
 };
 
 #endif

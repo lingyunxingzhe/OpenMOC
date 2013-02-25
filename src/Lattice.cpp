@@ -659,7 +659,7 @@ void Lattice::generateCSGLists(std::vector<int>* surf_flags, std::vector<double>
 				for (iter2 = cells_surfaces.begin(); iter2 != cells_surfaces.end(); ++iter2) {
 
 					if (iter2->second->getType() == CIRCLE && iter2->first < 0) {
-						radius = static_cast<Circle*>(iter2->second)->getRadius();
+						radius = iter2->second->getScale();
 						log_printf(DEBUG, "Lattice: making circle (center_x, center_y, radius): (%f,%f,%f)", current_origin->getX(), current_origin->getY(), radius);
 
 						int surf_flags_index = surf_flags->size();
